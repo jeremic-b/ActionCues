@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActionCues - Live Link Face Remote Control</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+    <header>
+        <h1>ACTIONCUES <span style="font-size:11px;font-weight:400;color:var(--text-dim);letter-spacing:0.5px;">LIVE LINK FACE REMOTE CONTROL</span></h1>
+        <div class="ws-status">
+            <div class="ws-dot" id="wsDot"></div>
+            <span id="wsLabel">Connecting</span>
+        </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="history">Session History</button>
+        <button class="tab" data-tab="log">Command Log</button>
+        <button class="tab" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div class="tab-content active" id="tab-dashboard">
+
+        <!-- Control Bar -->
+        <div class="control-bar">
+            <div class="control-group" style="flex:1">
+                <label>Slate Name</label>
+                <input type="text" class="slate-input" id="slateInput"
+                       placeholder="Scene_Shot" spellcheck="false">
+            </div>
+            <div class="control-group">
+                <label>Take Override (optional)</label>
+                <input type="number" id="takeOverride" min="1" placeholder="Auto"
+                       style="width:100px">
+            </div>
+            <div class="control-group" style="justify-content:flex-end">
+                <button class="btn-record" id="btnRecordAll" onclick="recordAll()">
+                    RECORD ALL
+                </button>
+            </div>
+            <div class="control-group" style="justify-content:flex-end">
+                <button class="btn-stop" id="btnStopAll" onclick="stopAll()">
+                    STOP ALL
+                </button>
+            </div>
+        </div>
+
+        <!-- Poll Indicator -->
+        <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:12px;">
+            <div class="poll-indicator">
+                <span class="poll-label">NEXT POLL</span>
+                <div class="poll-bar-track">
+                    <div class="poll-bar-fill" id="pollBarFill"></div>
+                </div>
+                <span class="poll-countdown" id="pollCountdown">--s</span>
+            </div>
+        </div>
+
+        <!-- Add Device -->
+        <div class="add-device-panel">
+            <div class="control-group">
+                <label>Device IP (manual)</label>
+                <input type="text" id="addIp" placeholder="192.168.1.100" spellcheck="false">
+            </div>
+            <div class="control-group">
+                <label>OSC Port</label>
+                <input type="number" id="addPort" value="8000" style="width:80px">
+            </div>
+            <div class="control-group">
+                <label>Actor Name</label>
+                <input type="text" id="addActor" placeholder="ActorA" spellcheck="false">
+            </div>
+            <button class="btn-accent" onclick="addDevice()">Add Manually</button>
+            <div style="border-left:1px solid var(--border);height:36px;margin:0 4px;"></div>
+            <button class="btn-accent" onclick="scanDevices()">Scan Network</button>
+        </div>
+
+        <!-- Discovered Devices -->
+        <div class="discovered-panel" id="discoveredPanel" style="display:none;">
+            <div class="discovered-header">
+                <h3>Discovered Devices</h3>
+                <span style="font-size:11px;color:var(--text-dim);">
+                    Assign an actor name and click Confirm to activate
+                </span>
+            </div>
+            <div class="discovered-grid" id="discoveredGrid"></div>
+        </div>
+
+        <!-- Device Grid -->
+        <div class="device-grid" id="deviceGrid"></div>
+
+        <!-- Notification Feed (scrollable, persistent) -->
+        <div class="notification-box" id="notificationBox">
+            <div class="notification-box-inner" id="notificationFeed"></div>
+        </div>
+
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-content" id="tab-history">
+        <div class="log-container">
+            <div class="log-header">
+                <h3>Session Recording History</h3>
+                <div>
+                    <button class="btn-small" onclick="refreshHistory()">Refresh</button>
+                    <button class="btn-small btn-danger" onclick="clearHistory()">Clear Session</button>
+                </div>
+            </div>
+            <div style="padding:16px; overflow-x:auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Event</th>
+                            <th>Slate</th>
+                            <th>Actor</th>
+                            <th>Take</th>
+                            <th>Timecode</th>
+                            <th>Device</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Log Tab -->
+    <div class="tab-content" id="tab-log">
+        <!-- System Terminal -->
+        <div class="sys-terminal" style="margin-bottom:16px;">
+            <div class="sys-terminal-header">
+                <span class="sys-terminal-title">SYSTEM TERMINAL</span>
+                <button class="btn-small" onclick="clearTerminal()">Clear</button>
+            </div>
+            <div class="sys-terminal-scroll" id="sysTerminalScroll"></div>
+        </div>
+
+        <!-- Raw OSC Command Log -->
+        <div class="log-container">
+            <div class="log-header">
+                <h3>OSC Command Log</h3>
+                <div>
+                    <label style="font-size:11px;color:var(--text-dim);margin-right:8px;">
+                        <input type="checkbox" id="logAutoScroll" checked> Auto-scroll
+                    </label>
+                    <button class="btn-small" onclick="refreshLog()">Refresh</button>
+                    <button class="btn-small btn-danger" onclick="clearLog()">Clear</button>
+                </div>
+            </div>
+            <div class="log-scroll" id="logScroll"></div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+        <div class="settings-grid" id="settingsGrid"></div>
+        <div style="margin-top:12px;display:flex;gap:12px;align-items:center;">
+            <button class="btn-accent" onclick="saveSettings()">Save Settings</button>
+            <span id="settingsSaved" style="color:var(--green);font-size:12px;display:none;">
+                Settings saved (restart server for port changes)
+            </span>
+            <div style="margin-left:auto;">
+                <button class="btn-danger" onclick="restartServer()">Restart Server</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server Status Bar -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-item">
+            <span class="status-label">Server IP:</span>
+            <span class="status-value" id="statusIp">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">OSC Port:</span>
+            <span class="status-value" id="statusOscPort">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">HTTP Port:</span>
+            <span class="status-value" id="statusHttpPort">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Uptime:</span>
+            <span class="status-value" id="statusUptime">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Devices:</span>
+            <span class="status-value" id="statusDevices">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">OSC Engine:</span>
+            <span class="status-value" id="statusOsc">--</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Slate:</span>
+            <span class="status-value" id="statusSlate">--</span>
+        </div>
+    </div>
+
+    <!-- Credits -->
+    <div class="credits-bar">
+        ActionCues by <a href="https://github.com/jeremic-b" target="_blank">jeremic-b</a>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
