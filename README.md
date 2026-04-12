@@ -130,9 +130,18 @@ Configurable via the Settings tab in the dashboard:
 **Devices not appearing?**
 - Start ActionCues before opening Live Link Face on your devices
 - Ensure device and computer are on the same WiFi network
+- For best connection stability, use a **5 GHz WiFi network** — 2.4 GHz is more congested and prone to latency/dropouts during recording sessions
 - In Live Link Face, set OSC target to this computer's IP, port 8000
 - Check your firewall allows UDP port 8000
 - If the device was opened first, restart Live Link Face or add it manually
+
+**Windows: Devices not responding?**
+- Windows Firewall blocks incoming UDP traffic by default. When you first run ActionCues, Windows may show a firewall popup — click **"Allow access"**
+- If you missed the popup, open PowerShell as Administrator and run:
+  ```powershell
+  New-NetFirewallRule -DisplayName "ActionCues OSC" -Direction Inbound -Protocol UDP -LocalPort 8000 -Action Allow
+  ```
+- Alternatively, go to Windows Defender Firewall → Allow an app → find Python and allow it on Private networks
 
 **Commands not working?**
 - Ping the device first to establish the OSC connection
@@ -146,6 +155,12 @@ Configurable via the Settings tab in the dashboard:
 **Device manually stopped from the phone?**
 - Live Link Face does not send a stop confirmation when recording is ended
   directly on the device. Use Force Clear to reset the dashboard state.
+
+## Upcoming Features
+
+- **Video Display On/Off** — Remote toggle device screen during recording to save battery
+- **Timecode display** — Live timecode readout on recording device cards
+- **Light/Dark mode** — Theme toggle for different working environments
 
 ## Disclaimer
 
