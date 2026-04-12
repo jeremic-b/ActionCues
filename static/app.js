@@ -646,7 +646,19 @@ async function saveSettings() {
 async function updateStatus() {
     try {
         const s = await api('status');
-        document.getElementById('statusIp').textContent = s.server_ip;
+        const ipEl = document.getElementById('statusIp');
+        ipEl.textContent = s.server_ip;
+        if (s.ip_warning) {
+            ipEl.style.color = 'var(--red)';
+            ipEl.title = s.ip_warning;
+            if (!window._ipWarningShown) {
+                showNotification('error', s.ip_warning);
+                window._ipWarningShown = true;
+            }
+        } else {
+            ipEl.style.color = '';
+            ipEl.title = '';
+        }
         document.getElementById('statusOscPort').textContent = s.osc_listen_port;
         document.getElementById('statusHttpPort').textContent = s.http_port;
         document.getElementById('statusUptime').textContent = formatDuration(s.uptime_sec);
@@ -680,9 +692,27 @@ document.getElementById('slateInput').addEventListener('keydown', (e) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// Init — start WebSocket, status polling, poll progress
+// Theme — light/dark mode toggle
 // ══════════════════════════════════════════════════════════════════
 
+function toggleTheme() {
+    const isLight = document.documentElement.classList.toggle('light-mode');
+    localStorage.setItem('actioncues-theme', isLight ? 'light' : 'dark');
+    updateThemeButton();
+}
+
+function updateThemeButton() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    const isLight = document.documentElement.classList.contains('light-mode');
+    btn.textContent = isLight ? 'Dark' : 'Light';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Init — start WebSocket, status polling, poll progress, theme
+// ══════════════════════════════════════════════════════════════════
+
+updateThemeButton();
 connectWS();
 updateStatus();
 setInterval(updateStatus, 5000);

@@ -23,6 +23,37 @@
     --font: 'SF Mono', 'Fira Code', 'Consolas', monospace;
 }
 
+/* ── Light mode overrides ─────────────────────────────────────── */
+
+html.light-mode {
+    --bg: #f0f2f5;
+    --bg-card: #ffffff;
+    --bg-input: #f6f8fa;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --text-dim: #656d76;
+    --accent: #0969da;
+    --green: #1a7f37;
+    --red: #cf222e;
+    --orange: #bf8700;
+    --yellow: #9a6700;
+    --purple: #8250df;
+}
+
+html.light-mode .sys-terminal { background: #f6f8fa; }
+html.light-mode .term-time { color: #999; }
+html.light-mode .btn-record { background: #fff0f0; }
+html.light-mode .btn-record:hover { background: #ffe0e0; }
+html.light-mode .btn-stop:hover { background: #fff8e0; }
+html.light-mode .btn-danger:hover { background: #fff0f0; }
+html.light-mode .btn-accent:hover { background: #f0f6ff; }
+html.light-mode .btn-warning:hover { background: #fff8e0; }
+html.light-mode .device-card.status-recording { box-shadow: 0 0 12px rgba(207, 34, 46, 0.1); }
+html.light-mode .device-recording-info { background: rgba(207, 34, 46, 0.06); border-color: rgba(207, 34, 46, 0.15); }
+html.light-mode ::-webkit-scrollbar-track { background: #f0f2f5; }
+html.light-mode ::-webkit-scrollbar-thumb { background: #d0d7de; }
+html.light-mode ::-webkit-scrollbar-thumb:hover { background: #656d76; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {

@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ActionCues - Live Link Face Remote Control</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>if(localStorage.getItem('actioncues-theme')==='light')document.documentElement.classList.add('light-mode');</script>
 </head>
 <body>
 <div class="app">
     <header>
         <h1>ACTIONCUES <span style="font-size:11px;font-weight:400;color:var(--text-dim);letter-spacing:0.5px;">LIVE LINK FACE REMOTE CONTROL</span></h1>
-        <div class="ws-status">
-            <div class="ws-dot" id="wsDot"></div>
-            <span id="wsLabel">Connecting</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button id="themeToggle" class="btn-small" onclick="toggleTheme()" title="Toggle light/dark mode"></button>
+            <div class="ws-status">
+                <div class="ws-dot" id="wsDot"></div>
+                <span id="wsLabel">Connecting</span>
+            </div>
         </div>
     </header>
 

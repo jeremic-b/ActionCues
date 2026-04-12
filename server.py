@@ -70,16 +70,42 @@ _last_poll_time: float = 0.0
 # Utilities
 # ══════════════════════════════════════════════════════════════════
 
+def _is_valid_lan_ip(ip: str) -> bool:
+    """Check if an IP is a usable LAN address (not loopback or link-local)."""
+    return bool(ip) and not ip.startswith("127.") and not ip.startswith("169.254.")
+
+
 def get_server_ip() -> str:
-    """Detect this machine's LAN IP address."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    """Detect this machine's LAN IP using multiple strategies for cross-platform reliability."""
+    # Strategy 1: UDP routing table trick (works on most systems including Windows)
     try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        return s.getsockname()[0]
-    except Exception:
-        return "127.0.0.1"
-    finally:
+        ip = s.getsockname()[0]
         s.close()
+        if _is_valid_lan_ip(ip):
+            return ip
+    except Exception:
+        pass
+
+    # Strategy 2: gethostbyname (often works on Windows when Strategy 1 fails)
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        if _is_valid_lan_ip(ip):
+            return ip
+    except Exception:
+        pass
+
+    # Strategy 3: enumerate all network interfaces
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if _is_valid_lan_ip(ip):
+                return ip
+    except Exception:
+        pass
+
+    return "127.0.0.1"
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -281,7 +307,17 @@ async def lifespan(app: FastAPI):
     listen_port = config.get("osc_listen_port")
     osc = OSCEngine(listen_port=listen_port, on_event=handle_osc_event)
     osc.start()
+
+    # Startup diagnostics
+    server_ip = get_server_ip()
     logger.info(f"ActionCues starting — OSC port {listen_port}")
+    logger.info(f"Server IP detected: {server_ip}")
+    if server_ip == "127.0.0.1":
+        logger.warning("WARNING: Detected IP is localhost — devices will not be able to send responses back")
+    elif server_ip.startswith("169.254"):
+        logger.warning("WARNING: Detected link-local IP — check your network connection")
+    if sys.platform == "win32":
+        logger.info("Windows detected — if devices don't respond, allow Python through Windows Firewall (UDP port %d)", listen_port)
 
     # Start Zeroconf discovery
     _discovery = ZeroconfDiscovery(on_found=_handle_zeroconf_found)
@@ -676,8 +712,14 @@ async def get_status():
     all_d = device_mgr.get_all_dicts()
     confirmed = sum(1 for d in all_d if d["actor_name"])
     recording = sum(1 for d in all_d if d["is_recording"])
+    server_ip = get_server_ip()
+    ip_warning = ""
+    if server_ip == "127.0.0.1":
+        ip_warning = "Detected IP is localhost — devices cannot send responses back. Check network."
+    elif server_ip.startswith("169.254"):
+        ip_warning = "Detected link-local IP — check network connection."
     return {
-        "server_ip": get_server_ip(),
+        "server_ip": server_ip,
         "osc_listen_port": config.get("osc_listen_port"),
         "http_port": config.get("http_port"),
         "uptime_sec": round(time.time() - start_time),
@@ -685,6 +727,7 @@ async def get_status():
         "recording_devices": recording,
         "osc_running": osc.is_running if osc else False,
         "current_slate": session_mgr.current_slate,
+        "ip_warning": ip_warning,
     }
 
 
