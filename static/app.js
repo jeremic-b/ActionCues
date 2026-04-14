@@ -239,6 +239,8 @@ function renderDevices() {
                     }
                     <button class="btn-small" onclick="pingDevice('${escAttr(dev.id)}')"
                         ${isRec ? 'disabled' : ''}>Ping</button>
+                    <button class="btn-small" onclick="videoDisplayOff('${escAttr(dev.id)}')">Scrn Off</button>
+                    <button class="btn-small" onclick="videoDisplayOn('${escAttr(dev.id)}')">Scrn On</button>
                     <button class="btn-small" onclick="renameDevice('${escAttr(dev.id)}', '${escAttr(dev.actor_name)}')"
                         ${isRec ? 'disabled' : ''}>Rename</button>
                     <button class="btn-small btn-danger" onclick="removeDevice('${escAttr(dev.id)}')"
@@ -430,6 +432,46 @@ async function pingDevice(id) {
         showNotification('info', 'Ping sent');
     } catch (e) {
         showNotification('error', 'Failed to ping device');
+    }
+}
+
+/** Turn device screen on */
+async function videoDisplayOn(id) {
+    try {
+        await api('devices/video-display', { device_ids: [id], enabled: true });
+        showNotification('info', 'Screen On sent');
+    } catch (e) {
+        showNotification('error', 'Failed to send Screen On');
+    }
+}
+
+/** Turn device screen off (saves battery) */
+async function videoDisplayOff(id) {
+    try {
+        await api('devices/video-display', { device_ids: [id], enabled: false });
+        showNotification('info', 'Screen Off sent');
+    } catch (e) {
+        showNotification('error', 'Failed to send Screen Off');
+    }
+}
+
+/** Turn ALL device screens off */
+async function videoDisplayOffAll() {
+    try {
+        await api('devices/video-display', { enabled: false });
+        showNotification('info', 'Screen Off sent to all devices');
+    } catch (e) {
+        showNotification('error', 'Failed to send Screen Off');
+    }
+}
+
+/** Turn ALL device screens on */
+async function videoDisplayOnAll() {
+    try {
+        await api('devices/video-display', { enabled: true });
+        showNotification('info', 'Screen On sent to all devices');
+    } catch (e) {
+        showNotification('error', 'Failed to send Screen On');
     }
 }
 

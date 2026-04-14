@@ -169,6 +169,26 @@ class OSCEngine:
         client.send_message("/BatteryQuery", [])
         self.command_log.add("OUT", "/BatteryQuery", [], f"{ip}:{port}")
 
+    def send_video_display_on(self, ip: str, port: int):
+        """Turn on the device screen. Sends both address formats for compatibility."""
+        client = self._get_client(ip, port)
+        # Primary: /VideoDisplayOn (confirmed in 3D-LEX project)
+        client.send_message("/VideoDisplayOn", [])
+        self.command_log.add("OUT", "/VideoDisplayOn", [], f"{ip}:{port}")
+        # Fallback: /VideoDisplay with int arg
+        client.send_message("/VideoDisplay", [1])
+        self.command_log.add("OUT", "/VideoDisplay", [1], f"{ip}:{port}")
+
+    def send_video_display_off(self, ip: str, port: int):
+        """Turn off the device screen. Sends both address formats for compatibility."""
+        client = self._get_client(ip, port)
+        # Primary: /VideoDisplayOff (inferred from On pattern)
+        client.send_message("/VideoDisplayOff", [])
+        self.command_log.add("OUT", "/VideoDisplayOff", [], f"{ip}:{port}")
+        # Fallback: /VideoDisplay with int arg
+        client.send_message("/VideoDisplay", [0])
+        self.command_log.add("OUT", "/VideoDisplay", [0], f"{ip}:{port}")
+
     # ── Incoming handlers ─────────────────────────────────────────
     # All handlers extract sender IP via needs_reply_address=True.
 

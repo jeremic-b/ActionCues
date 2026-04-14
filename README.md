@@ -75,6 +75,8 @@ The server communicates with Live Link Face devices over **OSC (Open Sound Contr
 | `/RecordStart` | Server → Device | Start recording with slate_actorname + take |
 | `/RecordStop` | Server → Device | Stop recording |
 | `/BatteryQuery` | Server → Device | Request battery level |
+| `/VideoDisplayOn` | Server → Device | Turn on device screen |
+| `/VideoDisplayOff` | Server → Device | Turn off device screen (saves battery) |
 | `/RecordStartConfirm` | Device → Server | Device confirmed recording started |
 | `/RecordStopConfirm` | Device → Server | Device confirmed recording stopped |
 | `/SlateConfirm` | Device → Server | Device confirmed slate was set |
@@ -158,9 +160,7 @@ Configurable via the Settings tab in the dashboard:
 
 ## Upcoming Features
 
-- **Video Display On/Off** — Remote toggle device screen during recording to save battery
 - **Timecode display** — Live timecode readout on recording device cards
-- **Light/Dark mode** — Theme toggle for different working environments
 
 ## Disclaimer
 

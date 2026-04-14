@@ -446,6 +446,34 @@ async def ping_device(req: Request):
     return {"ok": True}
 
 
+@app.post("/api/devices/video-display")
+async def video_display(req: Request):
+    """
+    Toggle video display on device(s). Saves battery by turning off the screen.
+    Sends both /VideoDisplayOn|Off and /VideoDisplay [0|1] for compatibility.
+    """
+    body = await req.json()
+    enabled = body.get("enabled", True)
+    device_ids = body.get("device_ids")
+
+    targets = device_mgr.get_confirmed_devices()
+    if device_ids:
+        targets = [d for d in targets if d.id in device_ids]
+
+    for dev in targets:
+        try:
+            if enabled:
+                osc.send_video_display_on(dev.ip, dev.port)
+            else:
+                osc.send_video_display_off(dev.ip, dev.port)
+            label = "Screen On" if enabled else "Screen Off"
+            emit_terminal("osc_out", label, dev.actor_name or dev.ip)
+        except Exception as e:
+            logger.warning(f"VideoDisplay failed for {dev.actor_name or dev.ip}: {e}")
+
+    return {"ok": True, "sent_to": len(targets)}
+
+
 @app.post("/api/devices/confirm-discovered")
 async def confirm_discovered(req: ConfirmDiscoveredRequest):
     """Confirm a discovered device by assigning an actor name."""
