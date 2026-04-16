@@ -45,9 +45,13 @@ html.light-mode .term-time { color: #999; }
 html.light-mode .btn-record { background: #fff0f0; }
 html.light-mode .btn-record:hover { background: #ffe0e0; }
 html.light-mode .btn-stop:hover { background: #fff8e0; }
-html.light-mode .btn-danger:hover { background: #fff0f0; }
-html.light-mode .btn-accent:hover { background: #f0f6ff; }
-html.light-mode .btn-warning:hover { background: #fff8e0; }
+html.light-mode .btn-danger { color: var(--red); }
+html.light-mode .btn-danger:hover { background: #ffe8e8; color: var(--red); }
+html.light-mode .btn-accent { color: var(--accent); }
+html.light-mode .btn-accent:hover { background: #e8f1ff; color: var(--accent); }
+html.light-mode .btn-warning { color: var(--orange); }
+html.light-mode .btn-warning:hover { background: #fff4d6; color: var(--orange); }
+html.light-mode .btn-small:hover { background: #f0f2f5; }
 html.light-mode .device-card.status-recording { box-shadow: 0 0 12px rgba(207, 34, 46, 0.1); }
 html.light-mode .device-recording-info { background: rgba(207, 34, 46, 0.06); border-color: rgba(207, 34, 46, 0.15); }
 html.light-mode ::-webkit-scrollbar-track { background: #f0f2f5; }
@@ -274,8 +278,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .device-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
     margin-bottom: 12px;
 }
 
@@ -283,9 +287,114 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 16px;
+    padding: 18px 18px 16px;
     position: relative;
     transition: border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 240px;
+}
+
+.device-card > * { margin-bottom: 0; }
+
+/* ── View Toggle (in header) ─────────────────────────────── */
+
+.view-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.view-toggle-btn {
+    background: var(--bg-card);
+    border: none;
+    border-radius: 0;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+    min-width: auto;
+}
+
+.view-toggle-btn:hover { color: var(--text); }
+.view-toggle-btn.active { background: var(--accent); color: #fff; }
+html.light-mode .view-toggle-btn.active { color: #fff; }
+
+/* ── List view — simple flex rows, fully readable ─────────── */
+
+.device-grid.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.device-grid.list-view .device-card {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 10px 16px;
+    min-height: 0;
+    border-left-width: 3px;
+}
+
+.device-grid.list-view .device-header {
+    margin-bottom: 0;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    min-width: 180px;
+}
+.device-grid.list-view .device-actor { font-size: 13px; }
+
+.device-grid.list-view .device-details {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+}
+.device-grid.list-view .device-detail-label {
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+}
+.device-grid.list-view .device-detail-value { text-align: left; }
+
+.device-grid.list-view .device-recording-info {
+    margin-bottom: 0;
+    padding: 4px 8px;
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+
+.device-grid.list-view .device-poll-bar { display: none; }
+
+.device-grid.list-view .device-actions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    padding-top: 0;
+    border-top: none;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    margin-left: auto;
+    margin-top: 0;
+    gap: 6px;
+}
+.device-grid.list-view .action-row { flex-wrap: nowrap; gap: 6px; }
+.device-grid.list-view .action-label {
+    display: inline-block;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.7px;
+    margin-right: 2px;
 }
 
 /* Status border colors */
@@ -341,12 +450,95 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .battery-mid { color: var(--orange); }
 .battery-ok { color: var(--green); }
 
+/* ── Device dropdown menu (Rename/Remove) ────────── */
+
+.device-menu-wrap {
+    position: relative;
+}
+
+.btn-menu {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 2px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.btn-menu:hover { color: var(--text); border-color: var(--text-dim); }
+
+.device-menu-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    min-width: 100px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.device-menu-wrap.open .device-menu-dropdown { display: flex; flex-direction: column; gap: 2px; }
+
+.device-menu-dropdown button {
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: var(--font);
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.device-menu-dropdown button:hover { background: rgba(255,255,255,0.06); }
+.device-menu-dropdown button:disabled { opacity: 0.4; cursor: not-allowed; }
+.device-menu-dropdown button.menu-danger { color: var(--red); }
+.device-menu-dropdown button.menu-danger:hover { background: rgba(248,81,73,0.1); }
+
+html.light-mode .device-menu-dropdown { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+html.light-mode .device-menu-dropdown button:hover { background: rgba(0,0,0,0.04); }
+html.light-mode .device-menu-dropdown button.menu-danger:hover { background: rgba(207,34,46,0.06); }
+
 /* ── Device action buttons ────────────────────────── */
 
 .device-actions {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 6px;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+}
+
+.action-row {
+    display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.action-row.action-display {
+    justify-content: flex-start;
+    padding-top: 2px;
+}
+
+.action-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-right: 4px;
+    white-space: nowrap;
 }
 
 /* ── Recording info bar ───────────────────────────── */
@@ -394,6 +586,43 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     align-items: flex-end;
     flex-wrap: wrap;
     margin-bottom: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Inline divider + Displays label (no enclosure)
+   ══════════════════════════════════════════════════════════════════ */
+
+.row-divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border);
+    margin: 4px 6px;
+    flex-shrink: 0;
+}
+
+.advanced-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-right: 2px;
+    align-self: center;
+}
+
+/* Uniform sizing for Add Device / Scan Network / Off All / On All */
+.add-device-panel > button {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-width: 120px;
+    height: 36px;
+}
+
+.advanced-lock-hint {
+    font-size: 10px;
+    color: var(--orange);
+    margin: -8px 16px 12px;
+    padding: 0 2px;
 }
 
 /* ══════════════════════════════════════════════════════════════════

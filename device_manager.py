@@ -12,6 +12,7 @@ Manually-added devices persist to disk; auto-discovered ones are ephemeral.
 """
 
 import json
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -103,15 +104,18 @@ class DeviceManager:
 
     def _save(self):
         """Persist only manually-added devices (not auto-discovered)."""
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
-        devices = [
-            {"ip": d.ip, "port": d.port, "actor_name": d.actor_name, "device_name": d.device_name}
-            for d in self._devices.values() if not d.auto_discovered
-        ]
-        tmp = DEVICES_FILE.with_suffix(".tmp")
-        with open(tmp, "w") as f:
-            json.dump(devices, f, indent=2)
-        tmp.replace(DEVICES_FILE)
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            devices = [
+                {"ip": d.ip, "port": d.port, "actor_name": d.actor_name, "device_name": d.device_name}
+                for d in self._devices.values() if not d.auto_discovered
+            ]
+            tmp = DEVICES_FILE.with_suffix(".tmp")
+            with open(tmp, "w") as f:
+                json.dump(devices, f, indent=2)
+            tmp.replace(DEVICES_FILE)
+        except Exception as e:
+            logging.getLogger("device_manager").error(f"Failed to persist devices: {e}")
 
     # ── CRUD ──────────────────────────────────────────────────────
 

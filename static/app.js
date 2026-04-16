@@ -17,6 +17,7 @@ let terminalEntries = [];       // system terminal log
 const TERMINAL_MAX = 120;       // max terminal entries
 let lastPollTime = 0;           // unix timestamp of last poll
 let pollInterval = 30;          // poll interval in seconds
+let deviceView = localStorage.getItem('actioncues-device-view') || 'cards'; // 'cards' | 'list'
 
 // ══════════════════════════════════════════════════════════════════
 // WebSocket — real-time updates from server
@@ -66,6 +67,7 @@ function handleMessage(msg) {
         case 'device_update':
             devices = msg.devices || [];
             renderDevices();
+            updateRecordingLock();
             break;
 
         case 'recording_started':
@@ -105,7 +107,11 @@ function handleMessage(msg) {
             showNotification(msg.level || 'warning', msg.message);
             break;
     }
-    updateStatus();
+    // Debounce status updates — skip if one is already scheduled
+    if (!handleMessage._statusPending) {
+        handleMessage._statusPending = true;
+        setTimeout(() => { handleMessage._statusPending = false; updateStatus(); }, 2000);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -179,6 +185,9 @@ function renderDevices() {
     if (confirmed.length === 0) { grid.innerHTML = ''; return; }
 
     // ── Confirmed device cards ───────────────────────────────
+    // Update recording lock state + view mode after rendering
+    setTimeout(() => { updateRecordingLock(); applyDeviceView(); }, 0);
+
     grid.innerHTML = confirmed.map(dev => {
         const isRec = dev.is_recording;
         const statusClass = isRec ? 'status-recording' : 'status-idle';
@@ -209,12 +218,23 @@ function renderDevices() {
                <span class="device-detail-value" style="color:var(--purple)">${esc(dev.device_name)}</span>`
             : '';
 
-        // Action buttons — always show Stop, disable Ping/Rename/Remove during recording
+        // Action buttons — Record, Stop, Ping, Screen, plus dropdown for Rename/Remove
         return `
             <div class="device-card ${statusClass}">
                 <div class="device-header">
                     <span class="device-actor">${esc(dev.actor_name)}</span>
-                    <span class="device-status-badge ${badgeClass}">${statusLabel}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span class="device-status-badge ${badgeClass}">${statusLabel}</span>
+                        <div class="device-menu-wrap">
+                            <button class="btn-menu" onclick="this.parentElement.classList.toggle('open')" title="More options">&#9776;</button>
+                            <div class="device-menu-dropdown">
+                                <button onclick="renameDevice('${escAttr(dev.id)}', '${escAttr(dev.actor_name)}')"
+                                    ${isRec ? 'disabled' : ''}>Rename</button>
+                                <button class="menu-danger" onclick="removeDevice('${escAttr(dev.id)}')"
+                                    ${isRec ? 'disabled' : ''}>Remove</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ${recHtml}
                 <div class="device-details">
@@ -230,21 +250,22 @@ function renderDevices() {
                     <div class="device-poll-fill"></div>
                 </div>
                 <div class="device-actions">
-                    <button class="btn-small btn-accent" onclick="recordDevice('${escAttr(dev.id)}')"
-                        ${isRec ? 'disabled' : ''}>Record</button>
-                    <button class="btn-small btn-danger" onclick="stopDevice('${escAttr(dev.id)}')">Stop</button>
-                    ${isRec
-                        ? `<button class="btn-small btn-warning" onclick="forceClearRecording('${escAttr(dev.id)}')">Force Clear</button>`
-                        : ''
-                    }
-                    <button class="btn-small" onclick="pingDevice('${escAttr(dev.id)}')"
-                        ${isRec ? 'disabled' : ''}>Ping</button>
-                    <button class="btn-small" onclick="videoDisplayOff('${escAttr(dev.id)}')">Scrn Off</button>
-                    <button class="btn-small" onclick="videoDisplayOn('${escAttr(dev.id)}')">Scrn On</button>
-                    <button class="btn-small" onclick="renameDevice('${escAttr(dev.id)}', '${escAttr(dev.actor_name)}')"
-                        ${isRec ? 'disabled' : ''}>Rename</button>
-                    <button class="btn-small btn-danger" onclick="removeDevice('${escAttr(dev.id)}')"
-                        ${isRec ? 'disabled' : ''}>Remove</button>
+                    <div class="action-row">
+                        <button class="btn-small btn-accent" onclick="recordDevice('${escAttr(dev.id)}')"
+                            ${isRec ? 'disabled' : ''}>Record</button>
+                        <button class="btn-small btn-danger" onclick="stopDevice('${escAttr(dev.id)}')">Stop</button>
+                        ${isRec
+                            ? `<button class="btn-small btn-warning" onclick="forceClearRecording('${escAttr(dev.id)}')">Force Clear</button>`
+                            : ''
+                        }
+                        <button class="btn-small" onclick="pingDevice('${escAttr(dev.id)}')"
+                            ${isRec ? 'disabled' : ''}>Ping</button>
+                    </div>
+                    <div class="action-row action-display">
+                        <span class="action-label">Display</span>
+                        <button class="btn-small" onclick="videoDisplayOff('${escAttr(dev.id)}')">Off</button>
+                        <button class="btn-small" onclick="videoDisplayOn('${escAttr(dev.id)}')">On</button>
+                    </div>
                 </div>
             </div>`;
     }).join('');
@@ -284,6 +305,17 @@ function esc(str) {
 /** Escape for use inside onclick='...' attribute strings */
 function escAttr(str) {
     return esc(str).replace(/'/g, '&#39;');
+}
+
+/** Download a string as a CSV file */
+function downloadCSV(baseName, csvContent) {
+    const date = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${baseName}_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -377,6 +409,7 @@ async function api(path, body = null) {
         opts.body = JSON.stringify(body);
     }
     const res = await fetch(`/api/${path}`, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
 }
 
@@ -586,6 +619,22 @@ async function refreshLog() {
     }
 }
 
+async function exportLog() {
+    try {
+        const result = await api('log');
+        const entries = result.log || [];
+        if (entries.length === 0) return showNotification('info', 'No log entries to export');
+        const header = 'Timestamp,Direction,Device,Address,Args';
+        const rows = entries.map(e =>
+            `"${e.timestamp}","${e.direction}","${e.device || ''}","${e.address}","${e.args.join('; ')}"`
+        );
+        downloadCSV('actioncues_command_log', [header, ...rows].join('\n'));
+        showNotification('success', `Exported ${entries.length} log entries`);
+    } catch (e) {
+        showNotification('error', 'Failed to export log');
+    }
+}
+
 async function clearLog() {
     if (!confirm('Clear the command log?')) return;
     await api('log/clear', {});
@@ -600,7 +649,7 @@ async function refreshHistory() {
     const result = await api('history');
     const tbody = document.getElementById('historyBody');
     const entries = result.history || [];
-    tbody.innerHTML = entries.reverse().map(e => {
+    tbody.innerHTML = [...entries].reverse().map(e => {
         const time = e.timestamp ? e.timestamp.split('T')[1]?.split('.')[0] || e.timestamp : '--';
         const isStart = e.event === 'record_start';
         const label = isStart ? 'REC START' : 'REC STOP';
@@ -617,6 +666,22 @@ async function refreshHistory() {
             <td style="color:var(--text-dim)">${e.device_ip || ''}</td>
         </tr>`;
     }).join('');
+}
+
+async function exportHistory() {
+    try {
+        const result = await api('history');
+        const entries = result.history || [];
+        if (entries.length === 0) return showNotification('info', 'No history to export');
+        const header = 'Timestamp,Event,Slate,Actor,Take,Timecode,Device IP';
+        const rows = entries.map(e =>
+            `"${e.timestamp || ''}","${e.event || ''}","${e.slate || ''}","${e.actor || ''}","${e.take || ''}","${e.timecode || ''}","${e.device_ip || ''}"`
+        );
+        downloadCSV('actioncues_session_history', [header, ...rows].join('\n'));
+        showNotification('success', `Exported ${entries.length} history entries`);
+    } catch (e) {
+        showNotification('error', 'Failed to export history');
+    }
 }
 
 async function clearHistory() {
@@ -637,6 +702,8 @@ const SETTING_META = {
     confirm_timeout_sec:      { label: 'Confirm Timeout',    desc: 'Seconds to wait for confirm',              type: 'number' },
     battery_poll_interval_sec:{ label: 'Poll Interval',      desc: 'Seconds between battery/keepalive polls',  type: 'number' },
     auto_discover_devices:    { label: 'Auto-Discover',      desc: 'Auto-detect devices sending OSC',           type: 'checkbox' },
+    lock_during_recording:    { label: 'Lock During Recording', desc: 'Disable slate and take inputs while any device is recording', type: 'checkbox' },
+    keyboard_shortcuts_enabled:{ label: 'Keyboard Shortcuts',   desc: 'Enable Escape = Stop All hotkey (disabled by default)', type: 'checkbox' },
 };
 
 function renderSettings() {
@@ -670,6 +737,7 @@ async function saveSettings() {
         if (r.ok) {
             settings = r.settings;
             pollInterval = settings.battery_poll_interval_sec || pollInterval;
+            updateRecordingLock();
             document.getElementById('settingsSaved').style.display = 'inline';
             setTimeout(() => document.getElementById('settingsSaved').style.display = 'none', 4000);
             showNotification('success', 'Settings saved');
@@ -715,10 +783,77 @@ async function updateStatus() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// Advanced actions
+// ══════════════════════════════════════════════════════════════════
+
+/** Switch device grid between cards and list view (persisted) */
+function setDeviceView(view) {
+    if (view !== 'cards' && view !== 'list') view = 'cards';
+    deviceView = view;
+    localStorage.setItem('actioncues-device-view', view);
+    applyDeviceView();
+}
+
+function applyDeviceView() {
+    const grid = document.getElementById('deviceGrid');
+    if (grid) grid.classList.toggle('list-view', deviceView === 'list');
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === deviceView);
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Click-outside handler — close dropdown menus
+// ══════════════════════════════════════════════════════════════════
+
+document.addEventListener('click', (e) => {
+    // Close all open device dropdown menus when clicking outside
+    document.querySelectorAll('.device-menu-wrap.open').forEach(wrap => {
+        if (!wrap.contains(e.target)) {
+            wrap.classList.remove('open');
+        }
+    });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Recording lock — disable certain controls while recording
+// ══════════════════════════════════════════════════════════════════
+
+function isRecordingLocked() {
+    // Setting default is true; only false if explicitly disabled in Settings
+    if (settings.lock_during_recording === false) return false;
+    return devices.some(d => d.is_recording);
+}
+
+function updateRecordingLock() {
+    const locked = isRecordingLocked();
+    // Disable slate input and take override during recording
+    const slateInput = document.getElementById('slateInput');
+    const takeOverride = document.getElementById('takeOverride');
+
+    if (slateInput) slateInput.disabled = locked;
+    if (takeOverride) takeOverride.disabled = locked;
+
+    // Show contextual hint only when lock is actually engaged
+    const hint = document.getElementById('lockHint');
+    if (hint) {
+        if (locked) {
+            hint.textContent = 'Controls locked — recording is active. Disable lock to override.';
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
 // Keyboard shortcuts
 // ══════════════════════════════════════════════════════════════════
 
 document.addEventListener('keydown', (e) => {
+    // Keyboard shortcuts are opt-in (default disabled) to avoid accidental
+    // disruptions during an 8-hour recording session.
+    if (!settings || settings.keyboard_shortcuts_enabled !== true) return;
     // Escape = emergency stop all
     if (e.key === 'Escape') {
         if (devices.some(d => d.is_recording)) { stopAll(); e.preventDefault(); }
@@ -729,7 +864,7 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('slateInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const slate = e.target.value.trim();
-        if (slate) api('slate/set', { slate });
+        if (slate) api('slate/set', { slate }).catch(() => showNotification('error', 'Failed to set slate'));
     }
 });
 
@@ -755,7 +890,9 @@ function updateThemeButton() {
 // ══════════════════════════════════════════════════════════════════
 
 updateThemeButton();
+applyDeviceView();
 connectWS();
 updateStatus();
 setInterval(updateStatus, 5000);
 setInterval(updatePollProgress, 1000);
+

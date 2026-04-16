@@ -23,6 +23,8 @@ DEFAULTS = {
     "confirm_timeout_sec": 3,           # seconds to wait for a confirm reply
     "battery_poll_interval_sec": 30,    # seconds between keepalive/battery polls
     "auto_discover_devices": True,      # auto-detect devices sending OSC to us
+    "lock_during_recording": True,      # disable slate/take/send-slate while any device is recording
+    "keyboard_shortcuts_enabled": False, # enable keyboard shortcuts (Esc = stop all)
 }
 
 # ── Internal state ────────────────────────────────────────────────

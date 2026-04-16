@@ -4,6 +4,8 @@ Production-grade OSC remote controller for Epic Games' **Live Link Face** iOS ap
 
 Built for film, motion capture, and virtual production workflows where reliable multi-device recording control is critical.
 
+> **Recommended setup:** ActionCues is designed for use in an **offline environment** — a dedicated laptop connected to a router with only your recording devices on the network. This ensures maximum stability and eliminates network interference during long recording sessions.
+
 ## Features
 
 - **Multi-device control** — Record and stop multiple devices running Live Link Face at once
@@ -11,7 +13,11 @@ Built for film, motion capture, and virtual production workflows where reliable 
 - **Unique filenames** — Each device gets `SlateName_ActorName` for organized file management
 - **Auto-discovery** — Finds devices via Zeroconf/Bonjour and OSC auto-detection
 - **Session management** — Automatic take numbering, recording history with timecodes
+- **Remote display control** — Turn device screens on/off remotely to save battery
 - **Real-time dashboard** — WebSocket-powered UI with live status, battery levels, and command log
+- **Card & list view** — Toggle between card grid and compact list view for the device panel
+- **Light & dark mode** — Switch themes from the header (persisted across sessions)
+- **Recording lock** — Optionally lock slate/take inputs while any device is recording
 - **Keepalive polling** — Prevents device timeouts during long recording sessions
 - **Cross-platform** — Runs on macOS and Windows (Python 3.9+)
 
@@ -119,13 +125,17 @@ Configurable via the Settings tab in the dashboard:
 | Confirm Timeout | 3s | Wait time for device confirmation |
 | Poll Interval | 30s | Keepalive/battery poll frequency |
 | Auto-Discover | On | Detect devices sending OSC to us |
+| Lock During Recording | On | Disable slate/take inputs while recording |
+| Keyboard Shortcuts | Off | Enable keyboard shortcuts (see below) |
 
 ## Keyboard Shortcuts
+
+Keyboard shortcuts are **disabled by default** to prevent accidental disruptions during long recording sessions. Enable them in Settings.
 
 | Key | Action |
 |-----|--------|
 | `Escape` | Emergency stop all recordings |
-| `Enter` (in slate field) | Set the slate name |
+| `Enter` (in slate field) | Set the slate name (always active) |
 
 ## Troubleshooting
 
@@ -157,10 +167,6 @@ Configurable via the Settings tab in the dashboard:
 **Device manually stopped from the phone?**
 - Live Link Face does not send a stop confirmation when recording is ended
   directly on the device. Use Force Clear to reset the dashboard state.
-
-## Upcoming Features
-
-- **Timecode display** — Live timecode readout on recording device cards
 
 ## Disclaimer
 

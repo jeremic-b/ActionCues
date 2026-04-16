@@ -79,10 +79,9 @@ def get_server_ip() -> str:
     """Detect this machine's LAN IP using multiple strategies for cross-platform reliability."""
     # Strategy 1: UDP routing table trick (works on most systems including Windows)
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
         if _is_valid_lan_ip(ip):
             return ip
     except Exception:
@@ -258,6 +257,8 @@ async def poll_devices():
 
             for dev in confirmed:
                 try:
+                    if osc is None or not osc.is_running:
+                        break
                     # SetTarget only for idle devices — disrupts recording
                     if not dev.is_recording:
                         osc.send_set_target(dev.ip, dev.port, server_ip, listen_port)
@@ -557,10 +558,11 @@ async def record_stop(req: Request):
     Stop recording. Sends /RecordStop to ALL confirmed devices unconditionally.
     The phone ignores it if not recording — no harm done.
     """
+    body = {}
     try:
         body = await req.json()
     except Exception:
-        body = {}
+        pass
     device_ids = body.get("device_ids") if body else None
 
     targets = device_mgr.get_confirmed_devices()
@@ -768,19 +770,23 @@ async def websocket_endpoint(ws: WebSocket):
     """Dashboard WebSocket — sends init payload then streams updates."""
     await ws.accept()
     ws_clients.add(ws)
-    # Send full state on connect
-    await ws.send_text(json.dumps({
-        "type": "init",
-        "devices": device_mgr.get_all_dicts(),
-        "slate": session_mgr.current_slate,
-        "settings": config.get_all(),
-        "last_poll_time": _last_poll_time,
-        "poll_interval": config.get("battery_poll_interval_sec"),
-    }))
     try:
+        # Send full state on connect
+        await ws.send_text(json.dumps({
+            "type": "init",
+            "devices": device_mgr.get_all_dicts(),
+            "slate": session_mgr.current_slate,
+            "settings": config.get_all(),
+            "last_poll_time": _last_poll_time,
+            "poll_interval": config.get("battery_poll_interval_sec"),
+        }))
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.warning(f"WebSocket error: {e}")
+    finally:
         ws_clients.discard(ws)
 
 

@@ -78,6 +78,11 @@ class ZeroconfDiscovery:
 
     def _cleanup(self):
         """Internal cleanup — close browsers and Zeroconf instance."""
+        for browser in self._browsers:
+            try:
+                browser.cancel()
+            except Exception:
+                pass
         self._browsers.clear()
         if self._zc:
             try:

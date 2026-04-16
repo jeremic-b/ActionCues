@@ -128,9 +128,19 @@ class SessionManager:
                     f"Next available: {self._takes.get(key, 0) + 1}"
                 )
             self._used.add((slate, actor, take))
+            old_take = self._takes.get(key)
             if take > self._takes.get(key, 0):
                 self._takes[key] = take
-            self._save_takes()
+            try:
+                self._save_takes()
+            except Exception as e:
+                # Rollback in-memory state to stay consistent with disk
+                self._used.discard((slate, actor, take))
+                if old_take is None:
+                    self._takes.pop(key, None)
+                else:
+                    self._takes[key] = old_take
+                raise RuntimeError(f"Failed to persist take: {e}") from e
             return take
 
     def set_take_number(self, slate: str, actor: str, take: int) -> dict:
