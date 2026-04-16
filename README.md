@@ -1,9 +1,9 @@
-<img width="1521" height="900" alt="acimage" src="https://github.com/user-attachments/assets/238b8e18-d793-4120-bba0-8f2ce6dcb80e" />
 # ActionCues — Live Link Face Remote Control
 
 Production-grade OSC remote controller for Epic Games' **Live Link Face** iOS app. Control multiple devices simultaneously from a real-time web dashboard on any machine on your local network.
 
 Built for film, motion capture, and virtual production workflows where reliable multi-device recording control is critical.
+<img width="1521" height="900" alt="acimage" src="https://github.com/user-attachments/assets/238b8e18-d793-4120-bba0-8f2ce6dcb80e" />
 
 > **Recommended setup:** ActionCues is designed for use in an **offline environment** — a dedicated laptop connected to a router with only your recording devices on the network. This ensures maximum stability and eliminates network interference during long recording sessions.
 
